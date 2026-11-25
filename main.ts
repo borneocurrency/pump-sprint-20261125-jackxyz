@@ -106,18 +106,24 @@ export interface Params {
   maxProbes: number;
 }
 
-// Settings: the fee math fixes the exits (a round trip must clear ~3% in fees, so the
-// take-profit is 10x that; the stop is half the take-profit; the stake keeps the fixed tx fee
-// under ~0.5% of a full-size trade). The entry bars were set from the dev-window sweep's flat
-// region, not its peak: minTrendUp 0.20 / maxPullback 0.10 / minAge 150 gives a small positive
-// mean (+0.009 SOL) that stays positive across every failed-tx draw, with 29 coins and a 1.5%
-// drawdown; the stricter cells score higher only through one lucky coin, so they were not used.
+// Settings: the fee math fixes the exits (a round trip must clear ~3% in fees; the take-profit
+// is far above that and the stop is half the take-profit; the small stake keeps the fixed tx fee
+// a small share of a trade). The entry bars come from the full dev-window sweep's flat region,
+// not its peak: minAge 200-300, minTrendUp 0.5-0.7 and maxPullback 0.10 are positive across
+// every failed-tx draw (mean +0.017 to +0.086 SOL, worst draw +0.013 to +0.076), with the
+// centre at minAge 250 / minTrendUp 0.70 (mean +0.086, worst +0.076, positive even without
+// the best trip, 37 coins, 0.4% drawdown). Tighter slippage (200bps, not 1000) matters: it
+// rejects fills that land far from the decision price in fast curves. Guardrail probes are
+// capped at 80 fills of pacing: a 300-fill target fires probes all day and costs more than
+// the guardrail is worth. NOTE: an early backtest on only the first data part looked
+// positive for looser bars; the full 128,058-event window reverses that, so these bars were
+// chosen on the full window only.
 export const DEFAULT_PARAMS: Params = {
-  minAge: 150,
+  minAge: 250,
   minRealSol: 3,
   maxRealSol: 70,
   trendWindow: 150,
-  minTrendUp: 0.2,
+  minTrendUp: 0.7,
   pullbackWindow: 60,
   minPullback: 0.07,
   maxPullback: 0.1,
@@ -127,10 +133,10 @@ export const DEFAULT_PARAMS: Params = {
   minBuyers: 4,
   minTrendTrades: 10,
   recentWindow: 30,
-  stakeSol: 0.2,
+  stakeSol: 0.1,
   minBuySol: 0.02,
-  buySlipBps: 1000,
-  takeProfit: 0.3,
+  buySlipBps: 200,
+  takeProfit: 0.5,
   stopLoss: 0.15,
   trail: 0.15,
   trailArm: 0.1,

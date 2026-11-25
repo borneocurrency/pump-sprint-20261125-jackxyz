@@ -93,8 +93,15 @@ export interface Dataset {
 export function loadDataset(kit: string): Dataset {
   const kitJson = JSON.parse(readFileSync(`${kit}/kit.json`, 'utf8'));
   const manifest = JSON.parse(readFileSync(`${kit}/dataset/manifest.json`, 'utf8'));
-  const raw = gunzipSync(readFileSync(`${kit}/dataset/events/part-00000.ndjson.gz`)).toString('utf8');
-  const all = raw.split('\n').filter((l) => l.length > 0).map((l) => JSON.parse(l));
+  // NOTE (local fix): the pilot's sim read only part-00000 (50,000 of 128,058 events).
+  // This kit's dataset ships in several parts; grade-local scores all of them, so read
+  // every file the manifest lists, in order.
+  const partPaths: string[] = (manifest.files ?? [{ path: 'events/part-00000.ndjson.gz' }]).map((f: { path: string }) => f.path);
+  const all: any[] = [];
+  for (const p of partPaths) {
+    const raw = gunzipSync(readFileSync(`${kit}/dataset/${p}`)).toString('utf8');
+    for (const l of raw.split('\n')) if (l.length > 0) all.push(JSON.parse(l));
+  }
   const { modulus, residue } = manifest.universe.sample;
   const excluded = new Set<string>(manifest.excluded_mints ?? []);
   const members = new Set<string>();
